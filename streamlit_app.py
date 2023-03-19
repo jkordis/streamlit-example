@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from scapy.all import *
+import ipaddress
 
 def pcap_to_dataframe(pcap_file):
     packets = rdpcap(pcap_file)
@@ -45,6 +46,18 @@ def main():
 
         st.write("### Filtered data")
         st.write(df)
+
+        st.sidebar.title("Public IPs:")
+        public_ips = []
+        for ip in df['Source IP'].unique():
+            if not ipaddress.ip_address(ip).is_private:
+                public_ips.append(ip)
+        for ip in df['Destination IP'].unique():
+            if not ipaddress.ip_address(ip).is_private and ip not in public_ips:
+                public_ips.append(ip)
+        public_df = df[df['Source IP'].isin(public_ips) | df['Destination IP'].isin(public_ips)]
+        st.write("### Public IP addresses")
+        st.write(public_df)
 
 if __name__ == '__main__':
     main()
