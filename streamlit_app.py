@@ -1,38 +1,63 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
 import streamlit as st
+import pyshark
+import pandas as pd
+import requests
+from ipaddress import ip_address, ip_network
 
-"""
-# Welcome to Streamlit!
+def process_pcap(pcap_file):
+    capture = pyshark.FileCapture(pcap_file)
+    ip_list = []
+    for pkt in capture:
+        try:
+            src_ip = pkt.ip.src
+            dst_ip = pkt.ip.dst
+            src_public = False
+            dst_public = False
+            if ip_address(src_ip).is_private:
+                src_public = False
+            else:
+                src_public = True
+            if ip_address(dst_ip).is_private:
+                dst_public = False
+            else:
+                dst_public = True
+            ip_list.append((src_ip, dst_ip, src_public, dst_public))
+        except AttributeError:
+            pass
+    capture.close()
+    df = pd.DataFrame(ip_list, columns=["Source IP", "Destination IP", "Source Public", "Destination Public"])
+    df = df.drop_duplicates()
+    return df
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
+def virustotal_lookup(ip_address):
+    url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip_address}"
+    headers = {"x-apikey": "your_api_key_here"}
+    response = requests.get(url, headers=headers)
+    data = response.json()
+    return data
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+def main():
+    st.title("IP Address Extractor and Virustotal Lookup")
+    st.write("This app extracts all the found IP addresses from a pcap file and sorts them by public and private IP addresses.")
+    st.write("You can then select addresses and run them against the virustotal api to get data for each.")
+    st.write("Make sure to take the pcap and turn the object into a byte stream before passing it to pyshark.FileCapture")
+    
+    # Upload the pcap file
+    file = st.file_uploader("Upload pcap file", type=["pcap", "pcapng"])
+    if file is not None:
+        df = process_pcap(file)
+        st.write("## IP Addresses Found")
+        st.write(df)
+        
+        # Select IP addresses to lookup in Virustotal
+        selected_ips = st.multiselect("Select IP addresses to lookup in Virustotal", df["Source IP"])
+        
+        # Run Virustotal lookup for selected IPs
+        if st.button("Lookup in Virustotal"):
+            for ip in selected_ips:
+                data = virustotal_lookup(ip)
+                st.write(f"## {ip}")
+                st.write(data)
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
-
-
-with st.echo(code_location='below'):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
-
-    Point = namedtuple('Point', 'x y')
-    data = []
-
-    points_per_turn = total_points / num_turns
-
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
-
-    st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color='#0068c9', opacity=0.5)
-        .encode(x='x:Q', y='y:Q'))
+if __name__ == "__main__":
+    main()
