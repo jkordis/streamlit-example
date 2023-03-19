@@ -29,9 +29,9 @@ def process_pcap(pcap_file):
     df = df.drop_duplicates()
     return df
 
-def virustotal_lookup(ip_address):
+def virustotal_lookup(ip_address, api_key):
     url = f"https://www.virustotal.com/api/v3/ip_addresses/{ip_address}"
-    headers = {"x-apikey": "your_api_key_here"}
+    headers = {"x-apikey": api_key}
     response = requests.get(url, headers=headers)
     data = response.json()
     return data
@@ -41,6 +41,9 @@ def main():
     st.write("This app extracts all the found IP addresses from a pcap file and sorts them by public and private IP addresses.")
     st.write("You can then select addresses and run them against the virustotal api to get data for each.")
     st.write("Make sure to take the pcap and turn the object into a byte stream before passing it to pyshark.FileCapture")
+
+    # Get the VirusTotal API key from the user
+    api_key = st.text_input("Enter your VirusTotal API key")
     
     # Upload the pcap file
     file = st.file_uploader("Upload pcap file", type=["pcap", "pcapng"])
@@ -55,7 +58,7 @@ def main():
         # Run Virustotal lookup for selected IPs
         if st.button("Lookup in Virustotal"):
             for ip in selected_ips:
-                data = virustotal_lookup(ip)
+                data = virustotal_lookup(ip, api_key)
                 st.write(f"## {ip}")
                 st.write(data)
 
