@@ -5,3 +5,4 @@ pyshark
 pandas
 requests
 ipaddress
+scapy
