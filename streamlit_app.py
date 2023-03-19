@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from scapy import all
+from scapy.all import *
 
 def pcap_to_dataframe(pcap_file):
     packets = rdpcap(pcap_file)
