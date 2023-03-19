@@ -23,6 +23,8 @@ def main():
 
     if pcap_file is not None:
         df = pcap_to_dataframe(pcap_file)
+
+        st.write("### Raw data")
         st.write(df)
 
         st.sidebar.title("Filter by:")
@@ -34,6 +36,14 @@ def main():
         if port != 'All':
             df = df[(df['Source Port'] == port) | (df['Destination Port'] == port)]
 
+        st.sidebar.title("Sort by:")
+        sort_by = st.sidebar.selectbox("Sort by", options=['None', 'Source IP', 'Destination IP', 'Source Port', 'Destination Port'])
+        ascending = st.sidebar.checkbox("Ascending", value=True)
+
+        if sort_by != 'None':
+            df = df.sort_values(by=sort_by, ascending=ascending)
+
+        st.write("### Filtered data")
         st.write(df)
 
 if __name__ == '__main__':
