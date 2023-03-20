@@ -47,7 +47,6 @@ def main():
         st.write("### Filtered data")
         st.write(df)
 
-        st.sidebar.title("Public IPs:")
         public_ips = []
         for ip in df['Source IP'].unique():
             if not ipaddress.ip_address(ip).is_private:
@@ -55,8 +54,16 @@ def main():
         for ip in df['Destination IP'].unique():
             if not ipaddress.ip_address(ip).is_private and ip not in public_ips:
                 public_ips.append(ip)
-        public_df = df[df['Source IP'].isin(public_ips) | df['Destination IP'].isin(public_ips)]
+        public_ips = list(set(public_ips))
+
+        public_df = pd.DataFrame(public_ips, columns=['Public IP'])
+        public_df['Select'] = False
+
         st.write("### Public IP addresses")
+        public_df = public_df[['Public IP', 'Select']]
+        public_df = public_df.drop_duplicates(subset='Public IP', keep=False)
+        selected_ips = st.multiselect("Select public IPs", options=public_df['Public IP'].tolist())
+        public_df.loc[public_df['Public IP'].isin(selected_ips), 'Select'] = True
         st.write(public_df)
 
 if __name__ == '__main__':
