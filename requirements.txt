@@ -6,3 +6,4 @@ pandas
 requests
 ipaddress
 scapy
+numpy
